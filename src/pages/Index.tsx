@@ -4,6 +4,7 @@ import { AuthSection } from "@/components/ApiDocs/AuthSection";
 import { EndpointCard } from "@/components/ApiDocs/EndpointCard";
 import { HelpSection } from "@/components/ApiDocs/HelpSection";
 import { PricingSection } from "@/components/ApiDocs/PricingSection";
+import {QuickTest} from "@/components/ApiDocs/QuickTest.tsx";
 
 const Index = () => {
   const getTrackExamples = {
@@ -329,6 +330,7 @@ print(req.json())`
 
       <PricingSection />
       <HelpSection />
+      <QuickTest />
 
       <footer className="bg-card border-t border-border py-6 sm:py-8">
         <div className="container mx-auto px-4 sm:px-6 text-center">
