@@ -140,7 +140,7 @@ print(req.json())`
   ],
   "image": [
     "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/526752102_18151293349384308_2770595130934380380_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=ylnQ2BiwKSwQ7kNvwGRghmr&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfW2ino2eJA2GdJmxOxaW0anYsm8FIkTT5NYDwudi5rwRA&oe=68963F1F&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/525968020_18151293358384308_6281507440102553008_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=XTs5nGYhUKUQ7kNvwG41LrE&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfVWT4UrWRX6DiSIW5Rsky9gGviPv4qaDMQy2sdxhb_otg&oe=68961D23&_nc_sid=10d13b",
+    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/525968020_18151293358384308_6281507440102553008_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=XTs5nGYhUKUQ7kNvwFPunxB&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfVWT4UrWRX6DiSIW5Rsky9gGviPv4qaDMQy2sdxhb_otg&oe=68961D23&_nc_sid=10d13b",
     "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/526653577_18151293370384308_1652572035077609463_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=QcbEzG6F1n0Q7kNvwEvN6Be&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfXoYxyLycs_o2Nd0kMafesJRqvq5hBfnH663aSGssZtLw&oe=68961455&_nc_sid=10d13b",
     "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/525761645_18151293379384308_4051547494930707604_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=N19o-ESHAXYQ7kNvwFEyhih&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfWW6QwXH9jCqI8OPGFZ8hsnpf2QHoMTzNvCtDx3tD1Gag&oe=68961251&_nc_sid=10d13b",
     "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/526620206_18151293388384308_674351246501224013_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=vXk-KdrTgdwQ7kNvwFPunxB&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfXgnyry0JSuCddVqtm-P-3Pov4I-rjGHAer-nbSAv8fzA&oe=68961FEF&_nc_sid=10d13b",
@@ -160,10 +160,21 @@ print(req.json())`
       <MainHeader />
       <ApiDocsHeader />
       
+      <div className="container mx-auto px-4 sm:px-6 mt-8">
+        <nav className="mb-8 flex flex-wrap gap-4 justify-center text-base font-medium">
+          <a href="#auth" className="hover:underline text-primary">Authentication</a>
+          <a href="#endpoints" className="hover:underline text-primary">API Endpoints</a>
+          <a href="#pricing" className="hover:underline text-primary">Pricing</a>
+          <a href="#projects" className="hover:underline text-primary">Projects</a>
+          <a href="#quick-test" className="hover:underline text-primary">Quick Test</a>
+        </nav>
+      </div>
       
-      <AuthSection />
+      <section id="auth">
+        <AuthSection />
+      </section>
       
-      <section className="py-8 sm:py-12 bg-secondary/30">
+      <section id="endpoints" className="py-8 sm:py-12 bg-secondary/30">
         <div className="container mx-auto px-4 sm:px-6">
           <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-center">API Endpoints</h2>
           
@@ -241,7 +252,11 @@ print(req.json())`
         </div>
       </section>
 
-      <section className="py-12 sm:py-16 bg-gradient-to-br from-primary/5 via-background to-secondary/10">
+      <section id="pricing">
+        <PricingSection />
+      </section>
+
+      <section id="projects" className="py-12 sm:py-16 bg-gradient-to-br from-primary/5 via-background to-secondary/10">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -328,9 +343,11 @@ print(req.json())`
         </div>
       </section>
 
-      <PricingSection />
       <HelpSection />
-      <QuickTest />
+
+      <section id="quick-test">
+        <QuickTest />
+      </section>
 
       <footer className="bg-card border-t border-border py-6 sm:py-8">
         <div className="container mx-auto px-4 sm:px-6 text-center">
