@@ -216,6 +216,18 @@ export const EndpointCard = ({
                 <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                   <li>cdnurl provides direct download stream link (may expire after some time)</li>
                   <li>For YouTube URLs, cdnurl can return a Telegram post link where the audio file is served in our channel</li>
+                  <li className="mt-2">
+                    <span className="font-medium">Looking for Spotify decryption guides?</span>{' '}
+                    <a 
+                      href="https://gist.github.com/AshokShau/ac1009be0a357c72d288371f73ac868c" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline hover:text-blue-600 transition-colors"
+                    >
+                      Check out our comprehensive Spotify decryption guides on GitHub Gist
+                    </a>
+                    <span className="text-xs text-muted-foreground ml-1">(opens in new tab)</span>
+                  </li>
                   <li>key field is used for internal decryption if needed</li>
                   <li>lyrics field may be empty if not available for the track</li>
                   <li>artists array contains all featured artists on the track</li>
