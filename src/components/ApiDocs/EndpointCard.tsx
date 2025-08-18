@@ -215,7 +215,7 @@ export const EndpointCard = ({
                 <h5 className="font-medium text-api-info">Important Notes</h5>
                 <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                   <li>cdnurl provides direct download stream link (may expire after some time)</li>
-                  <li>For YouTube URLs, cdnurl can return a Telegram post link where the audio file is served in our channel</li>
+                  <li>For YouTube URLs, cdnurl can return a Telegram post link where the audio file is served in our channel. For direct stream URLs, you can deploy your own instance of <a href="https://github.com/AshokShau/TgStream" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline hover:text-blue-600 transition-colors">TgStream</a><span className="text-xs text-muted-foreground ml-1">(opens in new tab)</span> to get direct stream URLs.</li>
                   <li className="mt-2">
                     <span className="font-medium">Looking for Spotify decryption guides?</span>{' '}
                     <a 
