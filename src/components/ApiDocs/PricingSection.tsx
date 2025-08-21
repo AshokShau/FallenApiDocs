@@ -1,6 +1,6 @@
 "use client";
 
-import {useMemo, useState, useEffect} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
 import {Calculator, Check, DollarSign} from "lucide-react";
@@ -65,14 +65,14 @@ function calcFixedPrice(tier: PricingTier, isAnnual: boolean): number | undefine
 
 // Fetch INR/USDT rate
 async function fetchUsdtRate() {
-  try {
-    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=inr");
-    const data = await res.json();
-    return data.tether.inr; // INR per USDT
-  } catch (err) {
-    console.error("Failed to fetch USDT rate", err);
-    return null;
-  }
+    try {
+        const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=inr");
+        const data = await res.json();
+        return data.tether.inr; // INR per USDT
+    } catch (err) {
+        console.error("Failed to fetch USDT rate", err);
+        return null;
+    }
 }
 
 
@@ -168,11 +168,25 @@ const PricingSection = () => {
                                 <div className="flex items-center gap-3">
                                     <Input
                                         type="number"
-                                        value={safeDaily}
-                                        min={100}
-                                        max={200_000}
-                                        step={100}
-                                        onChange={(e) => setDailyInput(Number(e.target.value))}
+                                        value={dailyInput === safeDaily ? safeDaily : dailyInput}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            if (value === "") {
+                                                // select all will clear the value (but you need to type a number)
+                                                setDailyInput(0);
+                                                return;
+                                            }
+
+                                            const numValue = Number(value);
+                                            if (!isNaN(numValue)) {
+                                                setDailyInput(numValue);
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            // When input loses focus, clamp the value to valid range
+                                            const clamped = clamp(dailyInput, 100, 200_000);
+                                            setDailyInput(clamped);
+                                        }}
                                     />
                                     <span className="text-xs text-muted-foreground">(rounded to nearest 500)</span>
                                 </div>
