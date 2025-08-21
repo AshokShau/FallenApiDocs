@@ -1,13 +1,12 @@
 "use client";
 
-import {useMemo, useState} from "react";
+import {useMemo, useState, useEffect} from "react";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
 import {Calculator, Check, DollarSign} from "lucide-react";
 import {Switch} from "@/components/ui/switch";
 import {Input} from "@/components/ui/input";
 import {Slider} from "@/components/ui/slider";
-
 
 interface PricingTier {
     name: string;
@@ -27,7 +26,6 @@ const FIXED_TIERS: PricingTier[] = [
     {name: "Enterprise", daily: 100_000, monthly: 3_000_000, monthlyPrice: 1499, perRequest: 1499 / 3_000_000},
     {name: "Custom", daily: 200_000, monthly: 6_000_000}, // Contact Us
 ];
-
 
 const DAYS_PER_MONTH = 30;
 const MIN_MONTHLY_PRICE = 49;
@@ -57,7 +55,6 @@ function calcAnnual(amountPerMonth: number) {
 }
 
 function findRecommendedFixedTier(monthlyReqs: number): PricingTier | undefined {
-    // Smallest fixed tier that covers the user's required monthly requests
     return FIXED_TIERS.find(t => t.monthly >= monthlyReqs);
 }
 
@@ -66,12 +63,28 @@ function calcFixedPrice(tier: PricingTier, isAnnual: boolean): number | undefine
     return isAnnual ? calcAnnual(tier.monthlyPrice) : tier.monthlyPrice;
 }
 
+// Fetch INR/USDT rate
+async function fetchUsdtRate() {
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=inr");
+    const data = await res.json();
+    return data.tether.inr; // INR per USDT
+  } catch (err) {
+    console.error("Failed to fetch USDT rate", err);
+    return null;
+  }
+}
+
 
 const PricingSection = () => {
     const [isAnnual, setIsAnnual] = useState(false);
-    const [dailyInput, setDailyInput] = useState<number>(3000); // controlled input/slider
+    const [dailyInput, setDailyInput] = useState<number>(3000);
+    const [usdtRate, setUsdtRate] = useState<number | null>(null);
 
-    // Keep slider & input perfectly in sync; sanitize user input
+    useEffect(() => {
+        fetchUsdtRate().then(setUsdtRate);
+    }, []);
+
     const safeDaily = useMemo(() => {
         const n = Number.isFinite(dailyInput) ? dailyInput : 0;
         return clamp(Math.round(n), 100, 200_000);
@@ -97,6 +110,11 @@ const PricingSection = () => {
         return calcFixedPrice(recommendedTier, isAnnual);
     }, [recommendedTier, isAnnual]);
 
+    const inrToUsdt = (inr: number | undefined) => {
+        if (!inr || !usdtRate) return null;
+        return (inr / usdtRate).toFixed(2);
+    };
+
     return (
         <section className="py-10 sm:py-16">
             <div className="container mx-auto px-4 sm:px-6">
@@ -105,9 +123,9 @@ const PricingSection = () => {
                     <Badge variant="outline" className="mb-3 inline-flex items-center px-2 py-1">
                         <DollarSign className="w-4 h-4 mr-1"/> Pricing
                     </Badge>
-                    <h2 className="text-3xl sm:text-4xl font-bold mb-2">API Pricing (INR)</h2>
+                    <h2 className="text-3xl sm:text-4xl font-bold mb-2">API Pricing (INR & USDT)</h2>
                     <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">
-                        Flexible pricing — enter any request volume. Bigger plans reduce your per‑request cost.
+                        Flexible pricing — shown in INR with live USDT conversion.
                     </p>
                 </div>
 
@@ -129,7 +147,16 @@ const PricingSection = () => {
                                 <Calculator className="w-4 h-4 text-muted"/>
                             </div>
                             <CardTitle className="text-2xl font-bold">
-                                {dynamicPrice != null ? `₹${dynamicPrice.toFixed(0)}` : "Contact Us"}
+                                {dynamicPrice != null ? (
+                                    <>
+                                        ₹{dynamicPrice.toFixed(0)}{" "}
+                                        {inrToUsdt(dynamicPrice) && (
+                                            <span className="text-sm text-muted-foreground">
+                                                (≈ {inrToUsdt(dynamicPrice)} USDT)
+                                            </span>
+                                        )}
+                                    </>
+                                ) : "Contact Us"}
                             </CardTitle>
                             <p className="text-sm text-muted-foreground">
                                 {dynamicPrice != null ? `per ${isAnnual ? "year" : "month"}` : "Custom enterprise pricing"}
@@ -182,7 +209,7 @@ const PricingSection = () => {
                         </CardContent>
                     </Card>
 
-                    {/* Recommendation / Nudge to bigger fixed plan */}
+                    {/* Recommended Plan */}
                     <Card className="border shadow-md ring-2 ring-green-300">
                         <CardHeader>
                             <div className="flex items-center gap-2 mb-3">
@@ -191,7 +218,16 @@ const PricingSection = () => {
                                 <Calculator className="w-4 h-4 text-muted"/>
                             </div>
                             <CardTitle className="text-2xl font-bold">
-                                {recommendedTierPrice != null ? `₹${recommendedTierPrice.toFixed(0)}` : "Contact Us"}
+                                {recommendedTierPrice != null ? (
+                                    <>
+                                        ₹{recommendedTierPrice.toFixed(0)}{" "}
+                                        {inrToUsdt(recommendedTierPrice) && (
+                                            <span className="text-sm text-muted-foreground">
+                                                (≈ {inrToUsdt(recommendedTierPrice)} USDT)
+                                            </span>
+                                        )}
+                                    </>
+                                ) : "Contact Us"}
                             </CardTitle>
                             <p className="text-sm text-muted-foreground">
                                 {recommendedTier ? `${recommendedTier.name} — covers up to ${formatInt(recommendedTier.monthly)} requests / month` : "We will tailor a plan for you"}
@@ -225,17 +261,18 @@ const PricingSection = () => {
                                         className="w-4 h-4 text-green-500 mr-1"/> 99.9% SLA</li>
                                 )}
 
-                                {/* Comparison: help users pick the bigger plan */}
+                                {/* Comparison */}
                                 {dynamicPrice != null && recommendedTierPrice != null && (
                                     <div className="mt-2 rounded-xl border p-3 bg-muted/30">
                                         <p className="text-xs">
                                             Custom
-                                            price: <strong>₹{dynamicPrice.toFixed(0)}</strong> vs {recommendedTier?.name} price: <strong>₹{recommendedTierPrice.toFixed(0)}</strong>
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {recommendedTierPrice <= dynamicPrice
-                                                ? "You pay the same or less with the larger plan — and keep headroom as you grow."
-                                                : "Custom plan fits your current usage; upgrade later for a lower per‑request rate."}
+                                            price: <strong>₹{dynamicPrice.toFixed(0)}</strong>{" "}
+                                            {inrToUsdt(dynamicPrice) && (
+                                                <span>(≈ {inrToUsdt(dynamicPrice)} USDT)</span>
+                                            )} vs {recommendedTier?.name} price: <strong>₹{recommendedTierPrice.toFixed(0)}</strong>{" "}
+                                            {inrToUsdt(recommendedTierPrice) && (
+                                                <span>(≈ {inrToUsdt(recommendedTierPrice)} USDT)</span>
+                                            )}
                                         </p>
                                     </div>
                                 )}
@@ -282,7 +319,16 @@ const PricingSection = () => {
                                         <Calculator className="w-4 h-4 text-muted"/>
                                     </div>
                                     <CardTitle className="text-2xl font-bold">
-                                        {price != null ? `₹${price.toFixed(0)}` : "Contact Us"}
+                                        {price != null ? (
+                                            <>
+                                                ₹{price.toFixed(0)}{" "}
+                                                {inrToUsdt(price) && (
+                                                    <span className="text-sm text-muted-foreground">
+                                                        (≈ {inrToUsdt(price)} USDT)
+                                                    </span>
+                                                )}
+                                            </>
+                                        ) : "Contact Us"}
                                     </CardTitle>
                                     <p className="text-sm text-muted-foreground">
                                         {price != null ? `per ${isAnnual ? "year" : "month"}` : "Custom pricing"}
