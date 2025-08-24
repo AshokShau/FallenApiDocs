@@ -18,7 +18,8 @@ interface EndpointParam {
 }
 
 interface Endpoint {
-    path: string;
+    path?: string;
+    endpoint?: string;
     method: string;
     description: string;
     params?: Record<string, EndpointParam>;
@@ -37,13 +38,19 @@ export const QuickTest = ({ endpoints, baseUrl }: QuickTestProps) => {
     const [formValues, setFormValues] = useState<Record<string, any>>({});
     
     // Get the currently selected endpoint data
-    const currentEndpoint = endpoints.find(ep => ep.path === selectedEndpoint);
+    const currentEndpoint = endpoints.find(ep => 
+        ep.path === selectedEndpoint || ep.endpoint === selectedEndpoint
+    );
     const requiresUrl = currentEndpoint?.requiresUrl ?? true; // Default to true for backward compatibility
     
     // Update form values when endpoint changes
     useEffect(() => {
         if (currentEndpoint?.params) {
             const initialValues: Record<string, any> = {};
+            if (currentEndpoint.requiresUrl !== false) {
+                initialValues.url = "https://open.spotify.com/track/6v8mSl4GZXok3Ebe9x4Jmr?si=92f724a39de84108";
+            }
+            
             Object.entries(currentEndpoint.params).forEach(([paramName, paramDef]) => {
                 if (paramDef.default !== undefined) {
                     initialValues[paramName] = paramDef.default;
@@ -61,13 +68,6 @@ export const QuickTest = ({ endpoints, baseUrl }: QuickTestProps) => {
             });
             setFormValues(initialValues);
             
-            // Set test URL if this endpoint requires a URL
-            if (requiresUrl && !formValues.url) {
-                setFormValues(prev => ({
-                    ...prev,
-                    url: "https://open.spotify.com/track/6v8mSl4GZXok3Ebe9x4Jmr?si=92f724a39de84108"
-                }));
-            }
         }
     }, [selectedEndpoint]);
     const [isLoading, setIsLoading] = useState(false);
@@ -109,7 +109,10 @@ export const QuickTest = ({ endpoints, baseUrl }: QuickTestProps) => {
         setStatusCode(null);
 
         try {
-            const endpointPath = selectedEndpoint.startsWith('/') ? selectedEndpoint.substring(1) : selectedEndpoint;
+            if (!selectedEndpoint) {
+                throw new Error('No endpoint selected');
+            }
+            
             const params = new URLSearchParams();
             
             // Add API key
@@ -126,9 +129,12 @@ export const QuickTest = ({ endpoints, baseUrl }: QuickTestProps) => {
                 }
             });
 
-            // Remove any trailing slash from baseUrl and ensure endpoint path is properly joined
+            // Get the endpoint path, removing any leading/trailing slashes
+            const endpointPath = selectedEndpoint.replace(/^\/+|\/+$/g, '');
+            
+            // Construct the full URL
             const apiBaseUrl = baseUrl.replace(/\/+$/, '');
-            const endpointUrl = `${apiBaseUrl}/${endpointPath.replace(/^\/+/, '')}?${params}`;
+            const endpointUrl = `${apiBaseUrl}/${endpointPath}?${params}`;
             
             const apiResponse = await fetch(endpointUrl);
             const responseData = await apiResponse.json();
@@ -209,16 +215,16 @@ export const QuickTest = ({ endpoints, baseUrl }: QuickTestProps) => {
                                 <Select value={selectedEndpoint} onValueChange={setSelectedEndpoint}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select an endpoint">
-                                            {selectedEndpoint ? 
-                                                endpoints.find(e => e.path === selectedEndpoint)?.description || 'Select an endpoint'
-                                                : 'Select an endpoint'
-                                            }
+                                            {currentEndpoint?.description || 'Select an endpoint'}
                                         </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
                                         {endpoints.map((endpoint) => (
-                                            <SelectItem key={endpoint.path} value={endpoint.path}>
-                                                {endpoint.path.replace(/^\//, '')} — {endpoint.description}
+                                            <SelectItem 
+                                                key={endpoint.path || endpoint.endpoint} 
+                                                value={endpoint.path || endpoint.endpoint || ''}
+                                            >
+                                                {(endpoint.path || endpoint.endpoint || '').replace(/^\//, '')} — {endpoint.description}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
