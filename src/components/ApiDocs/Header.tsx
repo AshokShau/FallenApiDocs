@@ -18,7 +18,7 @@ export const ApiDocsHeader = () => {
                         </p>
                     </div>
                     <Badge variant="secondary" className="shrink-0">
-                        v1.0
+                        v3.0
                     </Badge>
                 </div>
 
