@@ -10,9 +10,12 @@ import React from 'react';
 
 // Helper function to generate example code from endpoint data
 const generateExampleCode = (endpoint: any, authType: 'query' | 'header') => {
-    const baseUrl = 'https://tgmusic.fallenapi.fun';
-    const url = `${baseUrl}${endpoint.path}`;
-    
+    const baseUrl = docs.api.base_url;
+    const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+    const endpointPath = endpoint.path || endpoint.endpoint || '';
+    const cleanPath = endpointPath.replace(/^\/+/, '');
+    const url = cleanPath ? `${cleanBaseUrl}/${cleanPath}` : cleanBaseUrl;
+
     if (authType === 'query') {
         let params = {
             api_key: 'Your api key here',
@@ -23,11 +26,11 @@ const generateExampleCode = (endpoint: any, authType: 'query' | 'header') => {
                 return acc;
             }, {} as Record<string, any>)
         };
-        
+
         const paramsStr = Object.entries(params)
             .map(([key, value]) => `    "${key}": ${JSON.stringify(value)}`)
             .join(',\n');
-            
+
         return `import requests as r
 
 url = "${url}"
@@ -46,11 +49,11 @@ print(req.json())`;
             }
             return acc;
         }, {} as Record<string, any>);
-        
+
         const paramsStr = Object.entries(params)
             .map(([key, value]) => `    "${key}": ${JSON.stringify(value)}`)
             .join(',\n');
-            
+
         return `import requests as r
 
 url = "${url}"
@@ -94,7 +97,7 @@ const transformEndpoints = (endpoints: any[]): EndpointData[] => {
             query: generateExampleCode(endpoint, 'query'),
             header: generateExampleCode(endpoint, 'header')
         };
-        
+
         return {
             method: endpoint.method,
             endpoint: endpoint.path,
@@ -102,7 +105,14 @@ const transformEndpoints = (endpoints: any[]): EndpointData[] => {
             description: endpoint.description,
             platforms: ['All Platforms'],
             requestExamples,
-            responseExample: JSON.stringify(endpoint.response?.success?.example || {}, null, 2),
+            responseExample: JSON.stringify(
+                endpoint.response?.success?.example || // Try success.example first
+                endpoint.response?.example ||         // Then try response.example
+                endpoint.response ||                  // Then the entire response object
+                { message: 'No example response available' },
+                null,
+                2
+            ),
             parameters: Object.entries(endpoint.params || {}).map(([name, param]: [string, any]) => ({
                 name,
                 type: param.type || 'string',
@@ -128,7 +138,7 @@ const Index: React.FC = () => {
             <main className="container mx-auto px-4 py-8">
                 <ApiDocsHeader />
                 <AuthSection />
-                
+
                 <section className="py-8">
                     <div className="space-y-12">
                         <div className="space-y-4">
