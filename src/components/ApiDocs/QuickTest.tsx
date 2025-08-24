@@ -1,29 +1,104 @@
-import {useState} from "react";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle,} from "@/components/ui/card";
-import {Button} from "@/components/ui/button";
-import {Input} from "@/components/ui/input";
-import {Label} from "@/components/ui/label";
-import {Badge} from "@/components/ui/badge";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select";
-import {useToast} from "@/hooks/use-toast";
-import {CheckCircle, Loader2, Play, XCircle,} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { CheckCircle, Loader2, Play, XCircle } from "lucide-react";
 
-export const QuickTest = () => {
+interface EndpointParam {
+    type: string;
+    required?: boolean;
+    default?: any;
+    example?: any;
+    description: string;
+    enum?: string[];
+}
+
+interface Endpoint {
+    path: string;
+    method: string;
+    description: string;
+    params?: Record<string, EndpointParam>;
+    requiresUrl?: boolean;
+}
+
+interface QuickTestProps {
+    endpoints: Endpoint[];
+    baseUrl: string;
+}
+
+export const QuickTest = ({ endpoints, baseUrl }: QuickTestProps) => {
     const [apiKey, setApiKey] = useState("");
-    const [testUrl, setTestUrl] = useState(
-        "https://open.spotify.com/track/6v8mSl4GZXok3Ebe9x4Jmr?si=92f724a39de84108"
-    );
-    const [endpoint, setEndpoint] = useState("");
+    const [selectedEndpoint, setSelectedEndpoint] = useState("");
+    const [endpointParams, setEndpointParams] = useState<Record<string, any>>({});
+    const [formValues, setFormValues] = useState<Record<string, any>>({});
+    
+    // Get the currently selected endpoint data
+    const currentEndpoint = endpoints.find(ep => ep.path === selectedEndpoint);
+    const requiresUrl = currentEndpoint?.requiresUrl ?? true; // Default to true for backward compatibility
+    
+    // Update form values when endpoint changes
+    useEffect(() => {
+        if (currentEndpoint?.params) {
+            const initialValues: Record<string, any> = {};
+            Object.entries(currentEndpoint.params).forEach(([paramName, paramDef]) => {
+                if (paramDef.default !== undefined) {
+                    initialValues[paramName] = paramDef.default;
+                } else if (paramDef.example !== undefined) {
+                    initialValues[paramName] = paramDef.example;
+                } else if (paramDef.type === 'boolean') {
+                    initialValues[paramName] = false;
+                } else if (paramDef.type === 'number') {
+                    initialValues[paramName] = 0;
+                } else if (paramDef.type === 'array') {
+                    initialValues[paramName] = [];
+                } else {
+                    initialValues[paramName] = '';
+                }
+            });
+            setFormValues(initialValues);
+            
+            // Set test URL if this endpoint requires a URL
+            if (requiresUrl && !formValues.url) {
+                setFormValues(prev => ({
+                    ...prev,
+                    url: "https://open.spotify.com/track/6v8mSl4GZXok3Ebe9x4Jmr?si=92f724a39de84108"
+                }));
+            }
+        }
+    }, [selectedEndpoint]);
     const [isLoading, setIsLoading] = useState(false);
     const [response, setResponse] = useState<any>(null);
     const [statusCode, setStatusCode] = useState<number | null>(null);
     const {toast} = useToast();
 
+    const handleInputChange = (name: string, value: any) => {
+        setFormValues(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
     const testEndpoint = async () => {
-        if (!apiKey || !testUrl || !endpoint) {
+        // Validate required fields
+        const missingFields = [];
+        if (!apiKey) missingFields.push('API Key');
+        if (!selectedEndpoint) missingFields.push('Endpoint');
+        
+        // Check required params
+        currentEndpoint?.params && Object.entries(currentEndpoint.params).forEach(([param, def]) => {
+            if (def.required && !formValues[param]) {
+                missingFields.push(param);
+            }
+        });
+        
+        if (missingFields.length > 0) {
             toast({
-                title: "Missing fields",
-                description: "Please fill in API key, URL, and select an endpoint",
+                title: "Missing required fields",
+                description: `Please fill in: ${missingFields.join(', ')}`,
                 variant: "destructive",
             });
             return;
@@ -34,14 +109,28 @@ export const QuickTest = () => {
         setStatusCode(null);
 
         try {
-            const params = new URLSearchParams({
-                api_key: apiKey,
-                url: testUrl,
+            const endpointPath = selectedEndpoint.startsWith('/') ? selectedEndpoint.substring(1) : selectedEndpoint;
+            const params = new URLSearchParams();
+            
+            // Add API key
+            params.append('api_key', apiKey);
+            
+            // Add all form values to params
+            Object.entries(formValues).forEach(([key, value]) => {
+                if (value !== undefined && value !== null && value !== '') {
+                    if (Array.isArray(value)) {
+                        value.forEach(v => params.append(key, v));
+                    } else {
+                        params.append(key, String(value));
+                    }
+                }
             });
 
-            const apiResponse = await fetch(
-                `https://tgmusic.fallenapi.fun/${endpoint}?${params}`
-            );
+            // Remove any trailing slash from baseUrl and ensure endpoint path is properly joined
+            const apiBaseUrl = baseUrl.replace(/\/+$/, '');
+            const endpointUrl = `${apiBaseUrl}/${endpointPath.replace(/^\/+/, '')}?${params}`;
+            
+            const apiResponse = await fetch(endpointUrl);
             const responseData = await apiResponse.json();
 
             setStatusCode(apiResponse.status);
@@ -117,35 +206,104 @@ export const QuickTest = () => {
 
                             <div className="space-y-2">
                                 <Label htmlFor="endpoint">Endpoint</Label>
-                                <Select value={endpoint} onValueChange={setEndpoint}>
+                                <Select value={selectedEndpoint} onValueChange={setSelectedEndpoint}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select an endpoint"/>
+                                        <SelectValue placeholder="Select an endpoint">
+                                            {selectedEndpoint ? 
+                                                endpoints.find(e => e.path === selectedEndpoint)?.description || 'Select an endpoint'
+                                                : 'Select an endpoint'
+                                            }
+                                        </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="get_track">get_track — Track Info</SelectItem>
-                                        <SelectItem value="get_url">get_url — Track List</SelectItem>
-                                        <SelectItem value="snap">snap — Download Media</SelectItem>
+                                        {endpoints.map((endpoint) => (
+                                            <SelectItem key={endpoint.path} value={endpoint.path}>
+                                                {endpoint.path.replace(/^\//, '')} — {endpoint.description}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="test-url">Test URL</Label>
-                            <Input
-                                id="test-url"
-                                placeholder="https://open.spotify.com/track/..."
-                                value={testUrl}
-                                onChange={(e) => setTestUrl(e.target.value)}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Works with Spotify, Instagram, Twitter, Threads, and more.
-                            </p>
-                        </div>
+                        {currentEndpoint?.params && Object.entries(currentEndpoint.params).map(([paramName, paramDef]) => (
+                            <div key={paramName} className="space-y-2">
+                                <Label htmlFor={paramName}>
+                                    {paramName}
+                                    {paramDef.required && <span className="text-destructive ml-1">*</span>}
+                                </Label>
+                                {paramDef.type === 'select' || paramDef.enum ? (
+                                    <Select
+                                        value={formValues[paramName] || ''}
+                                        onValueChange={(value) => handleInputChange(paramName, value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={`Select ${paramName}`} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {paramDef.enum?.map((option) => (
+                                                <SelectItem key={option} value={option}>
+                                                    {option}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : paramDef.type === 'boolean' ? (
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            id={paramName}
+                                            checked={!!formValues[paramName]}
+                                            onChange={(e) => handleInputChange(paramName, e.target.checked)}
+                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        />
+                                        <Label htmlFor={paramName} className="text-sm font-medium">
+                                            {paramDef.description}
+                                        </Label>
+                                    </div>
+                                ) : (
+                                    <Input
+                                        id={paramName}
+                                        type={paramDef.type === 'number' ? 'number' : 'text'}
+                                        placeholder={paramDef.description}
+                                        value={formValues[paramName] || ''}
+                                        onChange={(e) => {
+                                            const value = paramDef.type === 'number' 
+                                                ? parseFloat(e.target.value) || 0 
+                                                : e.target.value;
+                                            handleInputChange(paramName, value);
+                                        }}
+                                    />
+                                )}
+                                {paramDef.description && (
+                                    <p className="text-xs text-muted-foreground">
+                                        {paramDef.description}
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+                        
+                        {requiresUrl && (
+                            <div className="space-y-2">
+                                <Label htmlFor="url">
+                                    URL
+                                    <span className="text-destructive ml-1">*</span>
+                                </Label>
+                                <Input
+                                    id="url"
+                                    placeholder="https://open.spotify.com/track/..."
+                                    value={formValues.url || ''}
+                                    onChange={(e) => handleInputChange('url', e.target.value)}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Works with Spotify, Instagram, Twitter, Threads, and more.
+                                </p>
+                            </div>
+                        )}
 
                         <Button
                             onClick={testEndpoint}
-                            disabled={isLoading || !apiKey || !testUrl || !endpoint}
+                            disabled={isLoading || !apiKey || !selectedEndpoint}
                             className="w-full"
                         >
                             {isLoading ? (

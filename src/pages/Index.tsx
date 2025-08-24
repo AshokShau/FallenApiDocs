@@ -1,274 +1,171 @@
-import {MainHeader} from "@/components/ApiDocs/MainHeader";
-import {ApiDocsHeader} from "@/components/ApiDocs/Header";
-import {AuthSection} from "@/components/ApiDocs/AuthSection";
-import {EndpointCard} from "@/components/ApiDocs/EndpointCard";
-import {HelpSection} from "@/components/ApiDocs/HelpSection";
+import { MainHeader } from "@/components/ApiDocs/MainHeader";
+import { ApiDocsHeader } from "@/components/ApiDocs/Header";
+import { AuthSection } from "@/components/ApiDocs/AuthSection";
+import { EndpointCard } from "@/components/ApiDocs/EndpointCard";
+import { HelpSection } from "@/components/ApiDocs/HelpSection";
 import PricingSection from "@/components/ApiDocs/PricingSection";
-import {QuickTest} from "@/components/ApiDocs/QuickTest.tsx";
+import { QuickTest } from "@/components/ApiDocs/QuickTest";
+import docs from '../../docs.json';
+import React from 'react';
 
-const Index = () => {
-    const getTrackExamples = {
-        query: `import requests as r
+// Helper function to generate example code from endpoint data
+const generateExampleCode = (endpoint: any, authType: 'query' | 'header') => {
+    const baseUrl = 'https://tgmusic.fallenapi.fun';
+    const url = `${baseUrl}${endpoint.path}`;
+    
+    if (authType === 'query') {
+        let params = {
+            api_key: 'Your api key here',
+            ...Object.keys(endpoint.params || {}).reduce((acc, key) => {
+                if (endpoint.params[key].example) {
+                    acc[key] = endpoint.params[key].example;
+                }
+                return acc;
+            }, {} as Record<string, any>)
+        };
+        
+        const paramsStr = Object.entries(params)
+            .map(([key, value]) => `    "${key}": ${JSON.stringify(value)}`)
+            .join(',\n');
+            
+        return `import requests as r
 
-url = "https://tgmusic.fallenapi.fun/get_track"
+url = "${url}"
 params = {
-    "api_key": "Your api key here",
-    "url": "https://www.youtube.com/watch?v=z3UHfi9vpbc"
+${paramsStr}
 }
 
 req = r.get(url, params=params)
 
-print(req.json())`,
-        header: `import requests as r
+print(req.json())`;
+    } else {
+        // Header auth
+        const params = Object.keys(endpoint.params || {}).reduce((acc, key) => {
+            if (endpoint.params[key].example) {
+                acc[key] = endpoint.params[key].example;
+            }
+            return acc;
+        }, {} as Record<string, any>);
+        
+        const paramsStr = Object.entries(params)
+            .map(([key, value]) => `    "${key}": ${JSON.stringify(value)}`)
+            .join(',\n');
+            
+        return `import requests as r
 
-url = "https://tgmusic.fallenapi.fun/get_track"
+url = "${url}"
 headers = {
     "X-API-Key": "Your api key here"
 }
 params = {
-    "url": "https://www.youtube.com/watch?v=z3UHfi9vpbc"
+${paramsStr}
 }
 
 req = r.get(url, headers=headers, params=params)
 
-print(req.json())`
-    };
-
-    const getTrackResponse = `{
-  "cdnurl": "https://t.me/FALLENAPI/6952",
-  "key": "",
-  "name": "Sunn Raha Hai Na Tu Aashiqui 2 Full Song With Lyrics | Aditya Roy Kapur, Shraddha Kapoor",
-  "artist": "T-Series",
-  "tc": "z3UHfi9vpbc",
-  "cover": "https://i.ytimg.com/vi/z3UHfi9vpbc/hqdefault.jpg",
-  "artists": [{"name": "T-Series"}],
-  "album": "T-Series",
-  "year": 2025,
-  "duration": 23400,
-  "lyrics": "",
-  "url": "https://www.youtube.com/watch?v=z3UHfi9vpbc",
-  "platform": "youtube"
-}`;
-
-    const getUrlExamples = {
-        query: `import requests as r
-
-url = "https://tgmusic.fallenapi.fun/get_url"
-params = {
-    "api_key": "Your api key here",
-    "url": "https://open.spotify.com/artist/4YRxDV8wJFPHPTeXepOstw"
-}
-
-req = r.get(url, params=params)
-
-print(req.json())`,
-        header: `import requests as r
-
-url = "https://tgmusic.fallenapi.fun/get_url"
-headers = {
-    "X-API-Key": "Your api key here"
-}
-params = {
-    "url": "https://open.spotify.com/artist/4YRxDV8wJFPHPTeXepOstw"
-}
-
-req = r.get(url, headers=headers, params=params)
-
-print(req.json())`
-    };
-
-    const getUrlResponse = `{
-  "results": [
-    {
-      "name": "Dhun (From \\"Saiyaara\\")",
-      "artist": "Mithoon",
-      "id": "1GFQthxDi4Tqe3wJ5j0G5S",
-      "year": "2025",
-      "cover": "https://i.scdn.co/image/ab67616d0000b273781faf59a3cb980fe3b493f8",
-      "cover_small": "https://i.scdn.co/image/ab67616d00004851781faf59a3cb980fe3b493f8",
-      "duration": 276,
-      "url": "https://open.spotify.com/track/1GFQthxDi4Tqe3wJ5j0G5S",
-      "platform": "spotify"
-    },
-    {
-      "name": "Apna Bana Le",
-      "artist": "Sachin-Jigar",
-      "id": "1hA697u7e1jX2XM8sWA6Uy",
-      "year": "2022",
-      "cover": "https://i.scdn.co/image/ab67616d0000b273b85b4e8fb6ba961aedfde386",
-      "cover_small": "https://i.scdn.co/image/ab67616d00004851b85b4e8fb6ba961aedfde386",
-      "duration": 261,
-      "url": "https://open.spotify.com/track/1hA697u7e1jX2XM8sWA6Uy",
-      "platform": "spotify"
+print(req.json())`;
     }
-  ]
-}`;
+};
 
-    const snapExamples = {
-        query: `import requests as r
-
-url = "https://tgmusic.fallenapi.fun/snap"
-params = {
-    "api_key": "Your api key here",
-    "url": "https://www.instagram.com/p/DMvZt5tTeTF/"
-}
-
-req = r.get(url, params=params)
-
-print(req.json())`,
-        header: `import requests as r
-
-url = "https://tgmusic.fallenapi.fun/snap"
-headers = {
-    "X-API-Key": "Your api key here"
-}
-params = {
-    "url": "https://www.instagram.com/p/DMvZt5tTeTF/"
-}
-
-req = r.get(url, headers=headers, params=params)
-
-print(req.json())`
+// Type for the transformed endpoint data
+interface EndpointData {
+    method: string;
+    endpoint: string;
+    title: string;
+    description: string;
+    platforms: string[];
+    requestExamples: {
+        query: string;
+        header: string;
     };
+    responseExample: string;
+    parameters: Array<{
+        name: string;
+        type: string;
+        required: boolean;
+        description: string;
+    }>;
+}
 
-    const snapResponse = `{
-  "video": [
-    {
-      "video": "https://scontent-yyz1-1.cdninstagram.com/o1/v/t16/f2/m84/AQMZOjq2ms-52UR8irW3r11av5NOfq5KQF5TeNKC-xahVXnyPNZWz5iZD_mPCOx8O5enkAgvpgL0b1zJ_vjBVU-iYoJTAlNpcSrD5lk.mp4?stp=dst-mp4&efg=eyJxZV9ncm91cHMiOiJbXCJpZ193ZWJfZGVsaXZlcnlfdnRzX290ZlwiXSIsInZlbmNvZGVfdGFnIjoidnRzX3ZvZF91cmxnZW4uY2Fyb3VzZWxfaXRlbS5jMi43MjAuYmFzZWxpbmUifQ&_nc_cat=108&vs=1397823771287939_187074088&_nc_vs=HBkcFQIYTGlnX2JhY2tmaWxsX3RpbWVsaW5lX3ZvZC8yNDQwRjg5NzRDNUE4QzMzMjhFRjA0QzczRkU3RTU5OF92aWRlb19kYXNoaW5pdC5tcDQVAALIARIAKAAYABsAFQAAJsS02OCwucc%2FFQIoAkMzLBdAFKn752yLRBgSZGFzaF9iYXNlbGluZV8xX3YxEQB17gdlxJ4BAA%3D%3D&_nc_rid=5b6df401ee&ccb=9-4&oh=00_AfXiU-_4SLzGrUiPCmtxvDsJ-SZ-hv53-sA6HczZO0swAQ&oe=68924A7F&_nc_sid=10d13b",
-      "thumbnail": "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/525844917_18151293442384308_3763330696892658598_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=Ofp2U0fLnEUQ7kNvwGTvIca&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfXuUeUjPl9Uz7DoPwOa6xJacehc_9rGJkHtSA5X-LU08w&oe=689621E5&_nc_sid=10d13b"
-    }
-  ],
-  "image": [
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/526752102_18151293349384308_2770595130934380380_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=ylnQ2BiwKSwQ7kNvwGRghmr&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfW2ino2eJA2GdJmxOxaW0anYsm8FIkTT5NYDwudi5rwRA&oe=68963F1F&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/525968020_18151293358384308_6281507440102553008_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=XTs5nGYhUKUQ7kNvwFPunxB&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfVWT4UrWRX6DiSIW5Rsky9gGviPv4qaDMQy2sdxhb_otg&oe=68961D23&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/526653577_18151293370384308_1652572035077609463_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=QcbEzG6F1n0Q7kNvwEvN6Be&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfXoYxyLycs_o2Nd0kMafesJRqvq5hBfnH663aSGssZtLw&oe=68961455&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/525761645_18151293379384308_4051547494930707604_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=N19o-ESHAXYQ7kNvwFEyhih&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfWW6QwXH9jCqI8OPGFZ8hsnpf2QHoMTzNvCtDx3tD1Gag&oe=68961251&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/526620206_18151293388384308_674351246501224013_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=vXk-KdrTgdwQ7kNvwFPunxB&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfXgnyry0JSuCddVqtm-P-3Pov4I-rjGHAer-nbSAv8fzA&oe=68961FEF&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/526671371_18151293397384308_5083905527562004022_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=b-_pUjEMDqIQ7kNvwFgvL1u&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfVVtMa22lo7jigGP1BYO7bTMPPYFkisWOv50F46fU2BSQ&oe=68961287&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/525948293_18151293406384308_983660461962414207_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=Qap49uFfLJoQ7kNvwFZMpDK&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfUmm0QjAzVmi0rgkd7AtMZsDRgBYKfESzqp-DDRe8U2jw&oe=689646FE&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/525919246_18151293415384308_5610342417235710085_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=c4-DFNx0TFQQ7kNvwFHjbZF&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfUGkQkEMDP801WgIpcvElY9MzlH8aY4nyX2eu4s4jyYig&oe=689631B9&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/525767270_18151293424384308_7504178429300632318_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=Fc301cTJBOUQ7kNvwG6AJsI&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfXNgeaPnMhui3HFijan1qZevOtqXovjzNKH7mSZ-5dTsQ&oe=68961827&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/526372285_18151293433384308_8780781852550723603_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=gzb_ayGRhosQ7kNvwHNJTys&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfXyYIas1nur-wK9_mVO-CTKFpyDiTWeldV9i499CtRWyA&oe=68963E8E&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/525452551_18151293451384308_3970447066133888940_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=38G9cuWz8dkQ7kNvwFMlDLN&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfV_TwNa0Mn4JMjH3kU52bpKFq9eWPCB0ai-O_QsffR9kQ&oe=689642EE&_nc_sid=10d13b",
-    "https://scontent-yyz1-1.cdninstagram.com/v/t51.2885-15/526368235_18151293460384308_431570861796242806_n.jpg?stp=dst-jpg_e35_p1080x1080_sh0.08_tt6&_nc_ht=scontent-yyz1-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QFUVA1-YPjbXQ-E7HD0VmKxxIqsnyCiy-BElzCXZo4gdXct3YGQa9HkOAFEuxecLIw&_nc_ohc=qHkL54eR2dMQ7kNvwHbDEai&_nc_gid=n9rhYFeVmTDC49GQ_MumyA&edm=APs17CUBAAAA&ccb=7-5&oh=00_AfXbjGxf4_GD9AvjuWeKocZaLvvTdcoPMkQ0vjjeSNlanA&oe=68963762&_nc_sid=10d13b"
-  ],
-  "fetch": true
-}`;
+// Function to transform API endpoint data
+const transformEndpoints = (endpoints: any[]): EndpointData[] => {
+    return endpoints.map(endpoint => {
+        const requestExamples = {
+            query: generateExampleCode(endpoint, 'query'),
+            header: generateExampleCode(endpoint, 'header')
+        };
+        
+        return {
+            method: endpoint.method,
+            endpoint: endpoint.path,
+            title: endpoint.description,
+            description: endpoint.description,
+            platforms: ['All Platforms'],
+            requestExamples,
+            responseExample: JSON.stringify(endpoint.response?.success?.example || {}, null, 2),
+            parameters: Object.entries(endpoint.params || {}).map(([name, param]: [string, any]) => ({
+                name,
+                type: param.type || 'string',
+                required: param.required || false,
+                description: param.description || ''
+            }))
+        };
+    });
+};
+
+const Index: React.FC = () => {
+    // State to hold the transformed endpoints
+    const [endpoints, setEndpoints] = React.useState<EndpointData[]>([]);
+
+    // Load and transform endpoints on component mount
+    React.useEffect(() => {
+        setEndpoints(transformEndpoints(docs.api.endpoints));
+    }, []); // Empty dependency array means this runs once on mount
 
     return (
         <div className="min-h-screen bg-background">
-            <MainHeader/>
-            <ApiDocsHeader/>
+            <MainHeader />
+            <main className="container mx-auto px-4 py-8">
+                <ApiDocsHeader />
+                <AuthSection />
+                
+                <section className="py-8">
+                    <div className="space-y-12">
+                        <div className="space-y-4">
+                            <h2 className="text-2xl font-bold">API Endpoints</h2>
+                            <p className="text-muted-foreground">
+                                Explore the available endpoints to integrate with our API.
+                            </p>
+                        </div>
 
-            <div className="container mx-auto px-4 sm:px-6 mt-8">
-                <nav className="mb-8 flex flex-wrap gap-4 justify-center text-base font-medium">
-                    <a href="#auth" className="hover:underline text-primary">Authentication</a>
-                    <a href="#endpoints" className="hover:underline text-primary">API Endpoints</a>
-                    <a href="#pricing" className="hover:underline text-primary">Pricing</a>
-                    <a href="#projects" className="hover:underline text-primary">Projects</a>
-                    <a href="#quick-test" className="hover:underline text-primary">Quick Test</a>
-                </nav>
-            </div>
-
-            <section id="auth">
-                <AuthSection/>
-            </section>
-
-            <section id="endpoints" className="py-8 sm:py-12 bg-secondary/30">
-                <div className="container mx-auto px-4 sm:px-6">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-center">API Endpoints</h2>
-
-                    <EndpointCard
-                        method="GET"
-                        endpoint="/get_track"
-                        title="Get Track Information"
-                        description="Extract detailed track information from music platform URLs including metadata, CDN URL, and lyrics."
-                        platforms={["YouTube", "Spotify", "Apple Music", "SoundCloud"]}
-                        parameters={[
-                            {
-                                name: "url",
-                                type: "string",
-                                required: true,
-                                description: "The URL of the track from a supported music platform"
-                            },
-                            {
-                                name: "api_key",
-                                type: "string",
-                                required: false,
-                                description: "Your API key (required only when not using X-API-Key header)"
-                            }
-                        ]}
-                        requestExamples={getTrackExamples}
-                        responseExample={getTrackResponse}
-                    />
-
-                    <EndpointCard
-                        method="GET"
-                        endpoint="/get_url"
-                        title="Get Track List"
-                        description="Retrieve a list of tracks from playlist, album, or artist URLs from music platforms."
-                        platforms={["YouTube", "Spotify", "Apple Music", "SoundCloud"]}
-                        parameters={[
-                            {
-                                name: "url",
-                                type: "string",
-                                required: true,
-                                description: "The URL of the playlist, album, or artist from a supported music platform"
-                            },
-                            {
-                                name: "api_key",
-                                type: "string",
-                                required: false,
-                                description: "Your API key (required only when not using X-API-Key header)"
-                            }
-                        ]}
-                        requestExamples={getUrlExamples}
-                        responseExample={getUrlResponse}
-                    />
-
-                    <EndpointCard
-                        method="GET"
-                        endpoint="/snap"
-                        title="Download Social Media Content"
-                        description="Download videos and images from social media posts with high quality preservation."
-                        platforms={["Instagram", "Twitter", "Facebook", "TikTok", "Threads"]}
-                        parameters={[
-                            {
-                                name: "url",
-                                type: "string",
-                                required: true,
-                                description: "The URL of the social media post to download content from"
-                            },
-                            {
-                                name: "api_key",
-                                type: "string",
-                                required: false,
-                                description: "Your API key (required only when not using X-API-Key header)"
-                            }
-                        ]}
-                        requestExamples={snapExamples}
-                        responseExample={snapResponse}
-                    />
-                </div>
-            </section>
-
-            <section id="pricing">
-                <PricingSection/>
-            </section>
-
-            <section id="projects"
-                     className="py-12 sm:py-16 bg-gradient-to-br from-primary/5 via-background to-secondary/10">
-                <div className="container mx-auto px-4 sm:px-6">
-                    <div className="text-center mb-12">
-                        <h2 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                            Projects Using This API
-                        </h2>
-                        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                            Discover amazing applications built with our powerful music and media API
-                        </p>
+                        <div className="space-y-12">
+                            {endpoints.map((endpoint, index) => (
+                                <EndpointCard
+                                    key={index}
+                                    method={endpoint.method}
+                                    endpoint={endpoint.endpoint}
+                                    title={endpoint.title}
+                                    description={endpoint.description}
+                                    platforms={endpoint.platforms}
+                                    requestExamples={endpoint.requestExamples}
+                                    responseExample={endpoint.responseExample}
+                                    parameters={endpoint.parameters}
+                                />
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                    <div className="mt-16">
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                                Projects Using This API
+                            </h2>
+                            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                                Discover amazing applications built with our powerful music and media API
+                            </p>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                         {/* FallenBeatZBot Card */}
                         <div
                             className="group relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10">
@@ -314,17 +211,12 @@ print(req.json())`
                         </div>
 
                         {/* SpTubeBot Card */}
-                        <div
-                            className="group relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10">
-                            <div
-                                className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"/>
+                        <div className="group relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10">
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"/>
                             <div className="relative p-8">
-                                <div
-                                    className="flex items-center justify-center w-16 h-16 mb-6 mx-auto rounded-2xl bg-gradient-to-br from-accent to-accent/80 shadow-lg">
-                                    <svg className="w-8 h-8 text-accent-foreground" fill="currentColor"
-                                         viewBox="0 0 24 24">
-                                        <path
-                                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                                <div className="flex items-center justify-center w-16 h-16 mb-6 mx-auto rounded-2xl bg-gradient-to-br from-accent to-accent/80 shadow-lg">
+                                    <svg className="w-8 h-8 text-accent-foreground" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
                                     </svg>
                                 </div>
                                 <h3 className="text-2xl font-bold text-center mb-3 text-foreground">SpTubeBot</h3>
@@ -356,14 +248,17 @@ print(req.json())`
                                 </div>
                             </div>
                         </div>
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            </main>
 
             <HelpSection/>
 
-            <section id="quick-test">
-                <QuickTest/>
+            <PricingSection/>
+
+            <section id="quick-test" className="container mx-auto px-4 py-8">
+                <QuickTest endpoints={docs.api.endpoints} baseUrl={docs.api.base_url} />
             </section>
 
             <footer className="bg-card border-t border-border py-6 sm:py-8">
