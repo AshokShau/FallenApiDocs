@@ -12,7 +12,7 @@ import React from 'react';
 const generateExampleCode = (endpoint: any, authType: 'query' | 'header') => {
     const baseUrl = docs.api.base_url;
     const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
-    const endpointPath = endpoint.path || endpoint.endpoint || '';
+    const endpointPath = endpoint.path;
     const cleanPath = endpointPath.replace(/^\/+/, '');
     const url = cleanPath ? `${cleanBaseUrl}/${cleanPath}` : cleanBaseUrl;
 
