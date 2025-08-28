@@ -37,13 +37,14 @@ async function fetchUsdtRate(): Promise<number | null> {
 
 
 const PRICING_RULES = [
-  { maxMonthly: 15_000, rate: 0.0016 },
-  { maxMonthly: 30_000, rate: 0.0013 },
-  { maxMonthly: 150_000, rate: 0.0010 },
-  { maxMonthly: 1_000_000, rate: 0.0008 },
-  { maxMonthly: 10_000_000, rate: 0.0006 },
-  { maxMonthly: 30_000_000, rate: 0.0005 },
+  { maxMonthly: 15_000, rate: 0.0020 },   // ~₹30
+  { maxMonthly: 30_000, rate: 0.0017 },   // ~₹51
+  { maxMonthly: 150_000, rate: 0.0015 },  // ~₹225
+  { maxMonthly: 1_000_000, rate: 0.0008 }, // ~₹800
+  { maxMonthly: 10_000_000, rate: 0.0006 },// ~₹6000
+  { maxMonthly: 30_000_000, rate: 0.0005 },// ~₹15000
 ] as const;
+
 
 const MIN_MONTHLY_PRICE = 49;
 
@@ -58,94 +59,15 @@ type PricingTier = {
 };
 
 const FIXED_TIERS: PricingTier[] = [
-  {
-    name: "Free",
-    daily: 500,
-    monthly: 15_000,
-    monthlyPrice: 0,
-    perRequest: 0,
-    features: ["500 requests/day", "Basic support", "7-day history"],
-  },
-  {
-    name: "Starter",
-    daily: 1_000,
-    monthly: 30_000,
-    monthlyPrice: 49,
-    perRequest: 49 / 30_000,
-    features: ["1,000 requests/day", "Email support", "30-day history", "API access"],
-  },
-  {
-    name: "Basic",
-    daily: 5_000,
-    monthly: 150_000,
-    monthlyPrice: 150,
-    perRequest: 150 / 150_000,
-    features: ["5,000 requests/day", "Priority support", "90-day history", "All APIs"],
-  },
-  {
-    name: "Growth",
-    daily: 20_000,
-    monthly: 600_000,
-    monthlyPrice: 480,
-    perRequest: 480 / 600_000,
-    features: [
-      "20,000 requests/day",
-      "Dedicated SLAs",
-      "1-year history",
-      "Advanced analytics",
-    ],
-    popular: true,
-  },
-  {
-    name: "Pro",
-    daily: 35_000,
-    monthly: 1_000_000,
-    monthlyPrice: 800,
-    perRequest: 800 / 1_000_000,
-    features: [
-      "35,000 requests/day",
-      "24/7 support",
-      "Unlimited history",
-      "Custom integrations",
-    ],
-  },
-  {
-    name: "Business",
-    daily: 125_000,
-    monthly: 3_750_000,
-    monthlyPrice: 2250,
-    perRequest: 2250 / 3_750_000,
-    features: [
-      "125,000 requests/day",
-      "Account manager",
-      "White-label options",
-      "SSO",
-    ],
-  },
-  {
-    name: "Enterprise",
-    daily: 300_000,
-    monthly: 9_000_000,
-    monthlyPrice: 5400,
-    perRequest: 5400 / 9_000_000,
-    features: [
-      "300,000 requests/day",
-      "Dedicated infrastructure",
-      "Custom solutions",
-      "Onboarding assistance",
-    ],
-  },
-  {
-    name: "Custom",
-    daily: 1_000_000,
-    monthly: 30_000_000,
-    features: [
-      "1M+ requests/day",
-      "Enterprise-grade SLA",
-      "Custom contracts",
-      "Dedicated support team",
-    ],
-  },
+  { name: "Starter", daily: 1_000, monthly: 30_000, monthlyPrice: 59, perRequest: 59 / 30_000 },
+  { name: "Basic", daily: 3_000, monthly: 90_000, monthlyPrice: 119, perRequest: 119 / 90_000 },
+  { name: "Growth", daily: 5_000, monthly: 150_000, monthlyPrice: 179, perRequest: 179 / 150_000 },
+  { name: "Pro", daily: 10_000, monthly: 300_000, monthlyPrice: 299, perRequest: 299 / 300_000 },
+  { name: "Advanced", daily: 15_000, monthly: 450_000, monthlyPrice: 449, perRequest: 449 / 450_000 }, // new
+  { name: "Scale", daily: 25_000, monthly: 750_000, monthlyPrice: 599, perRequest: 599 / 750_000 },
+  { name: "Business", daily: 50_000, monthly: 1_500_000, monthlyPrice: 1099, perRequest: 1099 / 1_500_000 },
+  { name: "Enterprise", daily: 100_000, monthly: 3_000_000, monthlyPrice: 1799, perRequest: 1799 / 3_000_000 },
+  { name: "Custom", daily: 200_000, monthly: 6_000_000 },
 ];
 
 
@@ -177,7 +99,7 @@ function findRecommendedFixedTier(
 
 function inrToUsdt(priceInInr: number, inrPerUsdt: number | null): string {
   if (!inrPerUsdt) return "—";
-  return (priceInInr / inrPerUsdt).toFixed(2); // FIX: divide instead of multiply
+  return (priceInInr / inrPerUsdt).toFixed(2);
 }
 
 
@@ -197,7 +119,7 @@ export default function PricingSection() {
   useEffect(() => {
     fetchUsdtRate().then(setUsdtRate);
   }, []);
-  
+
   const handleRedirect = () => {
     window.open("https://t.me/AshokShau", "_blank");
   };
