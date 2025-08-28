@@ -1,384 +1,536 @@
 "use client";
 
-import {useEffect, useMemo, useState} from "react";
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
-import {Badge} from "@/components/ui/badge";
-import {Calculator, Check, DollarSign} from "lucide-react";
-import {Switch} from "@/components/ui/switch";
-import {Input} from "@/components/ui/input";
-import {Slider} from "@/components/ui/slider";
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Info, Check, Star, Zap } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 
-interface PricingTier {
-    name: string;
-    daily: number;
-    monthly: number;
-    monthlyPrice?: number;
-    perRequest?: number;
+
+async function fetchUsdtRate(): Promise<number | null> {
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=inr"
+    );
+    const data = await res.json();
+    return data.tether.inr; // INR per USDT
+  } catch (err) {
+    console.error("Failed to fetch USDT rate", err);
+    return null;
+  }
 }
 
-const FIXED_TIERS: PricingTier[] = [
-    {name: "Starter", daily: 1_000, monthly: 30_000, monthlyPrice: 49, perRequest: 49 / 30_000},
-    {name: "Basic", daily: 3_000, monthly: 90_000, monthlyPrice: 99, perRequest: 99 / 90_000},
-    {name: "Growth", daily: 5_000, monthly: 150_000, monthlyPrice: 149, perRequest: 149 / 150_000},
-    {name: "Pro", daily: 10_000, monthly: 300_000, monthlyPrice: 249, perRequest: 249 / 300_000},
-    {name: "Scale", daily: 25_000, monthly: 750_000, monthlyPrice: 499, perRequest: 499 / 750_000},
-    {name: "Business", daily: 50_000, monthly: 1_500_000, monthlyPrice: 899, perRequest: 899 / 1_500_000},
-    {name: "Enterprise", daily: 100_000, monthly: 3_000_000, monthlyPrice: 1499, perRequest: 1499 / 3_000_000},
-    {name: "Custom", daily: 200_000, monthly: 6_000_000}, // Contact Us
-];
 
-const DAYS_PER_MONTH = 30;
-const MIN_MONTHLY_PRICE = 49;
-const CONTACT_US_THRESHOLD = 10_000_000; // >10M/mo → Contact Us
-
-// Decreasing per-request rates by volume
 const PRICING_RULES = [
-    {maxMonthly: 100_000, rate: 0.0016},
-    {maxMonthly: 1_000_000, rate: 0.0010},
-    {maxMonthly: 10_000_000, rate: 0.0006},
+  { maxMonthly: 15_000, rate: 0.0016 },
+  { maxMonthly: 30_000, rate: 0.0013 },
+  { maxMonthly: 150_000, rate: 0.0010 },
+  { maxMonthly: 1_000_000, rate: 0.0008 },
+  { maxMonthly: 10_000_000, rate: 0.0006 },
+  { maxMonthly: 30_000_000, rate: 0.0005 },
 ] as const;
 
-const clamp = (val: number, min: number, max: number) => Math.min(max, Math.max(min, val));
-const roundToStep = (value: number, step: number) => Math.ceil(value / step) * step;
-const formatInt = (n: number) => n.toLocaleString();
+const MIN_MONTHLY_PRICE = 49;
 
-function calcDynamicMonthlyPrice(monthlyReqs: number): number | undefined {
-    if (monthlyReqs > CONTACT_US_THRESHOLD) return undefined; // Contact Us
-    const rule = PRICING_RULES.find(r => monthlyReqs <= r.maxMonthly);
-    if (!rule) return undefined;
-    const price = Math.max(MIN_MONTHLY_PRICE, monthlyReqs * rule.rate);
-    return price;
-}
-
-function calcAnnual(amountPerMonth: number) {
-    return amountPerMonth * 12 * 0.85; // 15% off
-}
-
-function findRecommendedFixedTier(monthlyReqs: number): PricingTier | undefined {
-    return FIXED_TIERS.find(t => t.monthly >= monthlyReqs);
-}
-
-function calcFixedPrice(tier: PricingTier, isAnnual: boolean): number | undefined {
-    if (tier.monthlyPrice == null) return undefined;
-    return isAnnual ? calcAnnual(tier.monthlyPrice) : tier.monthlyPrice;
-}
-
-// Fetch INR/USDT rate
-async function fetchUsdtRate() {
-    try {
-        const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=inr");
-        const data = await res.json();
-        return data.tether.inr; // INR per USDT
-    } catch (err) {
-        console.error("Failed to fetch USDT rate", err);
-        return null;
-    }
-}
-
-
-const PricingSection = () => {
-    const [isAnnual, setIsAnnual] = useState(false);
-    const [dailyInput, setDailyInput] = useState<number>(3000);
-    const [usdtRate, setUsdtRate] = useState<number | null>(null);
-
-    useEffect(() => {
-        fetchUsdtRate().then(setUsdtRate);
-    }, []);
-
-    const safeDaily = useMemo(() => {
-        const n = Number.isFinite(dailyInput) ? dailyInput : 0;
-        return clamp(Math.round(n), 100, 200_000);
-    }, [dailyInput]);
-
-    const roundedDaily = useMemo(() => roundToStep(safeDaily, 500), [safeDaily]);
-    const monthlyReqs = useMemo(() => roundedDaily * DAYS_PER_MONTH, [roundedDaily]);
-
-    const dynamicMonthlyPrice = useMemo(() => calcDynamicMonthlyPrice(monthlyReqs), [monthlyReqs]);
-    const dynamicPrice = useMemo(() => {
-        if (dynamicMonthlyPrice == null) return undefined;
-        return isAnnual ? calcAnnual(dynamicMonthlyPrice) : dynamicMonthlyPrice;
-    }, [dynamicMonthlyPrice, isAnnual]);
-
-    const dynamicPerRequest = useMemo(() => {
-        if (!dynamicMonthlyPrice) return undefined;
-        return dynamicMonthlyPrice / monthlyReqs;
-    }, [dynamicMonthlyPrice, monthlyReqs]);
-
-    const recommendedTier = useMemo(() => findRecommendedFixedTier(monthlyReqs), [monthlyReqs]);
-    const recommendedTierPrice = useMemo(() => {
-        if (!recommendedTier) return undefined;
-        return calcFixedPrice(recommendedTier, isAnnual);
-    }, [recommendedTier, isAnnual]);
-
-    const inrToUsdt = (inr: number | undefined) => {
-        if (!inr || !usdtRate) return null;
-        return (inr / usdtRate).toFixed(2);
-    };
-
-    return (
-        <section className="py-10 sm:py-16">
-            <div className="container mx-auto px-4 sm:px-6">
-                {/* Header */}
-                <div className="text-center mb-10">
-                    <Badge variant="outline" className="mb-3 inline-flex items-center px-2 py-1">
-                        <DollarSign className="w-4 h-4 mr-1"/> Pricing
-                    </Badge>
-                    <h2 className="text-3xl sm:text-4xl font-bold mb-2">API Pricing (INR & USDT)</h2>
-                    <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">
-                        Flexible pricing — shown in INR with live USDT conversion.
-                    </p>
-                </div>
-
-                {/* Billing toggle */}
-                <div className="flex justify-center items-center gap-3 mb-8">
-                    <span className={!isAnnual ? "font-semibold" : ""}>Monthly</span>
-                    <Switch checked={isAnnual} onCheckedChange={setIsAnnual}/>
-                    <span className={isAnnual ? "font-semibold" : ""}>
-            Annual <span className="text-green-600">(Save 15%)</span>
-          </span>
-                </div>
-
-                {/* Custom Calculator */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
-                    <Card className="border shadow-md ring-2 ring-blue-300">
-                        <CardHeader>
-                            <div className="flex items-center gap-2 mb-3">
-                                <Badge variant="secondary" className="bg-blue-100 text-blue-800">Custom Plan</Badge>
-                                <Calculator className="w-4 h-4 text-muted"/>
-                            </div>
-                            <CardTitle className="text-2xl font-bold">
-                                {dynamicPrice != null ? (
-                                    <>
-                                        ₹{dynamicPrice.toFixed(0)}{" "}
-                                        {inrToUsdt(dynamicPrice) && (
-                                            <span className="text-sm text-muted-foreground">
-                                                (≈ {inrToUsdt(dynamicPrice)} USDT)
-                                            </span>
-                                        )}
-                                    </>
-                                ) : "Contact Us"}
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                {dynamicPrice != null ? `per ${isAnnual ? "year" : "month"}` : "Custom enterprise pricing"}
-                            </p>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                <label className="block text-sm font-medium">Daily Requests</label>
-                                <div className="flex items-center gap-3">
-                                    <Input
-                                        type="number"
-                                        value={dailyInput === safeDaily ? safeDaily : dailyInput}
-                                        onChange={(e) => {
-                                            const value = e.target.value;
-                                            if (value === "") {
-                                                // select all will clear the value (but you need to type a number)
-                                                setDailyInput(0);
-                                                return;
-                                            }
-
-                                            const numValue = Number(value);
-                                            if (!isNaN(numValue)) {
-                                                setDailyInput(numValue);
-                                            }
-                                        }}
-                                        onBlur={() => {
-                                            // When input loses focus, clamp the value to valid range
-                                            const clamped = clamp(dailyInput, 100, 200_000);
-                                            setDailyInput(clamped);
-                                        }}
-                                    />
-                                    <span className="text-xs text-muted-foreground">(rounded to nearest 500)</span>
-                                </div>
-                                <Slider
-                                    value={[safeDaily]}
-                                    min={100}
-                                    max={200_000}
-                                    step={100}
-                                    onValueChange={(v) => setDailyInput(v[0])}
-                                />
-
-                                <ul className="mt-4 space-y-2 text-sm">
-                                    <li><strong>{formatInt(roundedDaily)}</strong> requests / day</li>
-                                    <li><strong>{formatInt(monthlyReqs)}</strong> requests / month</li>
-                                    {isAnnual && (
-                                        <li><strong>{formatInt(monthlyReqs * 12)}</strong> requests / year</li>
-                                    )}
-                                    {dynamicPerRequest != null && (
-                                        <li>₹{dynamicPerRequest.toFixed(5)} per request</li>
-                                    )}
-                                    <li className="flex items-center"><Check
-                                        className="w-4 h-4 text-green-500 mr-1"/> All major platforms
-                                    </li>
-                                    {monthlyReqs >= 150_000 && (
-                                        <li className="flex items-center"><Check
-                                            className="w-4 h-4 text-green-500 mr-1"/> Priority Support</li>
-                                    )}
-                                    {monthlyReqs >= 750_000 && (
-                                        <li className="flex items-center"><Check
-                                            className="w-4 h-4 text-green-500 mr-1"/> 99.9% SLA</li>
-                                    )}
-                                </ul>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Recommended Plan */}
-                    <Card className="border shadow-md ring-2 ring-green-300">
-                        <CardHeader>
-                            <div className="flex items-center gap-2 mb-3">
-                                <Badge variant="secondary" className="bg-green-100 text-green-800">Recommended
-                                    Plan</Badge>
-                                <Calculator className="w-4 h-4 text-muted"/>
-                            </div>
-                            <CardTitle className="text-2xl font-bold">
-                                {recommendedTierPrice != null ? (
-                                    <>
-                                        ₹{recommendedTierPrice.toFixed(0)}{" "}
-                                        {inrToUsdt(recommendedTierPrice) && (
-                                            <span className="text-sm text-muted-foreground">
-                                                (≈ {inrToUsdt(recommendedTierPrice)} USDT)
-                                            </span>
-                                        )}
-                                    </>
-                                ) : "Contact Us"}
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                {recommendedTier ? `${recommendedTier.name} — covers up to ${formatInt(recommendedTier.monthly)} requests / month` : "We will tailor a plan for you"}
-                            </p>
-                        </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-2 text-sm">
-                                <li><strong>{formatInt(roundedDaily)}</strong> requests / day (your input)</li>
-                                <li>
-                                    {recommendedTier ? (
-                                        <>
-                                            <strong>{formatInt(recommendedTier.daily)}</strong> requests / day included
-                                            {recommendedTier.perRequest && (
-                                                <span
-                                                    className="block text-muted-foreground">Effective: ₹{recommendedTier.perRequest.toFixed(5)} per request</span>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <span>Volumes this high require custom terms.</span>
-                                    )}
-                                </li>
-                                <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-1"/> All
-                                    major platforms
-                                </li>
-                                {recommendedTier && recommendedTier.monthly >= 150_000 && (
-                                    <li className="flex items-center"><Check
-                                        className="w-4 h-4 text-green-500 mr-1"/> Priority Support</li>
-                                )}
-                                {recommendedTier && recommendedTier.monthly >= 750_000 && (
-                                    <li className="flex items-center"><Check
-                                        className="w-4 h-4 text-green-500 mr-1"/> 99.9% SLA</li>
-                                )}
-
-                                {/* Comparison */}
-                                {dynamicPrice != null && recommendedTierPrice != null && (
-                                    <div className="mt-2 rounded-xl border p-3 bg-muted/30">
-                                        <p className="text-xs">
-                                            Custom
-                                            price: <strong>₹{dynamicPrice.toFixed(0)}</strong>{" "}
-                                            {inrToUsdt(dynamicPrice) && (
-                                                <span>(≈ {inrToUsdt(dynamicPrice)} USDT)</span>
-                                            )} vs {recommendedTier?.name} price: <strong>₹{recommendedTierPrice.toFixed(0)}</strong>{" "}
-                                            {inrToUsdt(recommendedTierPrice) && (
-                                                <span>(≈ {inrToUsdt(recommendedTierPrice)} USDT)</span>
-                                            )}
-                                        </p>
-                                    </div>
-                                )}
-                            </ul>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Fixed Plans Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {FIXED_TIERS.map((tier, index) => {
-                        const badgeStyle = index === 0
-                            ? "bg-green-100 text-green-800"
-                            : index === 1
-                                ? "bg-yellow-100 text-yellow-800"
-                                : index === 2
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-gray-100 text-gray-800";
-
-                        const ringStyle = index === 0
-                            ? "ring-green-300"
-                            : index === 1
-                                ? "ring-yellow-300"
-                                : index === 2
-                                    ? "ring-blue-300"
-                                    : "ring-gray-200";
-
-                        const price = calcFixedPrice(tier, isAnnual);
-                        const mostPopularIndex = 3; // Pro
-
-                        return (
-                            <Card key={tier.name}
-                                  className={`border shadow-sm transition-all ring-2 ${ringStyle} relative`}>
-                                {index === mostPopularIndex && (
-                                    <span
-                                        className="absolute top-2 right-2 bg-primary text-white text-xs px-2 py-1 rounded-full">
-                    Most Popular
-                  </span>
-                                )}
-
-                                <CardHeader>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Badge variant="secondary" className={badgeStyle}>{tier.name}</Badge>
-                                        <Calculator className="w-4 h-4 text-muted"/>
-                                    </div>
-                                    <CardTitle className="text-2xl font-bold">
-                                        {price != null ? (
-                                            <>
-                                                ₹{price.toFixed(0)}{" "}
-                                                {inrToUsdt(price) && (
-                                                    <span className="text-sm text-muted-foreground">
-                                                        (≈ {inrToUsdt(price)} USDT)
-                                                    </span>
-                                                )}
-                                            </>
-                                        ) : "Contact Us"}
-                                    </CardTitle>
-                                    <p className="text-sm text-muted-foreground">
-                                        {price != null ? `per ${isAnnual ? "year" : "month"}` : "Custom pricing"}
-                                    </p>
-                                </CardHeader>
-
-                                <CardContent>
-                                    <ul className="space-y-2 text-sm">
-                                        <li><strong>{formatInt(tier.daily)}</strong> requests / day</li>
-                                        <li><strong>{formatInt(tier.monthly)}</strong> requests / month</li>
-                                        {isAnnual && price != null && (
-                                            <li><strong>{formatInt(tier.monthly * 12)}</strong> requests / year</li>
-                                        )}
-                                        {tier.perRequest != null && (
-                                            <li>₹{tier.perRequest.toFixed(5)} per request</li>
-                                        )}
-                                        <li className="flex items-center"><Check
-                                            className="w-4 h-4 text-green-500 mr-1"/> All major platforms
-                                        </li>
-                                        {index >= 2 && (
-                                            <li className="flex items-center"><Check
-                                                className="w-4 h-4 text-green-500 mr-1"/> Priority Support</li>
-                                        )}
-                                        {index >= 4 && (
-                                            <li className="flex items-center"><Check
-                                                className="w-4 h-4 text-green-500 mr-1"/> 99.9% SLA</li>
-                                        )}
-                                    </ul>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
-                </div>
-            </div>
-        </section>
-    );
+type PricingTier = {
+  name: string;
+  daily: number;
+  monthly: number;
+  monthlyPrice?: number;
+  perRequest?: number;
+  features?: string[];
+  popular?: boolean;
 };
 
-export default PricingSection;
+const FIXED_TIERS: PricingTier[] = [
+  {
+    name: "Free",
+    daily: 500,
+    monthly: 15_000,
+    monthlyPrice: 0,
+    perRequest: 0,
+    features: ["500 requests/day", "Basic support", "7-day history"],
+  },
+  {
+    name: "Starter",
+    daily: 1_000,
+    monthly: 30_000,
+    monthlyPrice: 49,
+    perRequest: 49 / 30_000,
+    features: ["1,000 requests/day", "Email support", "30-day history", "API access"],
+  },
+  {
+    name: "Basic",
+    daily: 5_000,
+    monthly: 150_000,
+    monthlyPrice: 150,
+    perRequest: 150 / 150_000,
+    features: ["5,000 requests/day", "Priority support", "90-day history", "All APIs"],
+  },
+  {
+    name: "Growth",
+    daily: 20_000,
+    monthly: 600_000,
+    monthlyPrice: 480,
+    perRequest: 480 / 600_000,
+    features: [
+      "20,000 requests/day",
+      "Dedicated SLAs",
+      "1-year history",
+      "Advanced analytics",
+    ],
+    popular: true,
+  },
+  {
+    name: "Pro",
+    daily: 35_000,
+    monthly: 1_000_000,
+    monthlyPrice: 800,
+    perRequest: 800 / 1_000_000,
+    features: [
+      "35,000 requests/day",
+      "24/7 support",
+      "Unlimited history",
+      "Custom integrations",
+    ],
+  },
+  {
+    name: "Business",
+    daily: 125_000,
+    monthly: 3_750_000,
+    monthlyPrice: 2250,
+    perRequest: 2250 / 3_750_000,
+    features: [
+      "125,000 requests/day",
+      "Account manager",
+      "White-label options",
+      "SSO",
+    ],
+  },
+  {
+    name: "Enterprise",
+    daily: 300_000,
+    monthly: 9_000_000,
+    monthlyPrice: 5400,
+    perRequest: 5400 / 9_000_000,
+    features: [
+      "300,000 requests/day",
+      "Dedicated infrastructure",
+      "Custom solutions",
+      "Onboarding assistance",
+    ],
+  },
+  {
+    name: "Custom",
+    daily: 1_000_000,
+    monthly: 30_000_000,
+    features: [
+      "1M+ requests/day",
+      "Enterprise-grade SLA",
+      "Custom contracts",
+      "Dedicated support team",
+    ],
+  },
+];
+
+
+function roundToStep(value: number, step: number, min: number): number {
+  return Math.max(min, Math.round(value / step) * step);
+}
+
+function calcDynamicMonthlyPrice(monthlyRequests: number): number {
+  for (const rule of PRICING_RULES) {
+    if (monthlyRequests <= rule.maxMonthly) {
+      return Math.max(
+        MIN_MONTHLY_PRICE,
+        Math.round(monthlyRequests * rule.rate)
+      );
+    }
+  }
+  return 0;
+}
+
+function calcAnnual(monthlyPrice: number): number {
+  return monthlyPrice * 12 * 0.85;
+}
+
+function findRecommendedFixedTier(
+  monthlyRequests: number
+): PricingTier | null {
+  return FIXED_TIERS.find((tier) => monthlyRequests <= tier.monthly) || null;
+}
+
+function inrToUsdt(priceInInr: number, inrPerUsdt: number | null): string {
+  if (!inrPerUsdt) return "—";
+  return (priceInInr / inrPerUsdt).toFixed(2); // FIX: divide instead of multiply
+}
+
+
+export default function PricingSection() {
+  const [dailyRequests, setDailyRequests] = useState<number>(1000);
+  const [usdtRate, setUsdtRate] = useState<number | null>(null);
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">(
+    "monthly"
+  );
+
+  const monthlyRequests = dailyRequests * 30;
+  const dynamicMonthlyPrice = calcDynamicMonthlyPrice(monthlyRequests);
+  const dynamicAnnualPrice = calcAnnual(dynamicMonthlyPrice);
+  const recommendedTier = findRecommendedFixedTier(monthlyRequests);
+
+  // fetch USDT rate once
+  useEffect(() => {
+    fetchUsdtRate().then(setUsdtRate);
+  }, []);
+  
+  const handleRedirect = () => {
+    window.open("https://t.me/AshokShau", "_blank");
+  };
+
+  return (
+    <section className="w-full max-w-7xl mx-auto px-4 py-16">
+      <div className="text-center mb-12">
+        <h2 className="text-4xl font-bold mb-4">Flexible Pricing Plans</h2>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          Choose a plan that fits your needs. Scale seamlessly as your usage
+          grows. All plans include our core features.
+        </p>
+
+        {/* Billing Toggle */}
+        <div className="inline-flex items-center justify-center p-1 bg-muted rounded-lg mt-6">
+          <button
+            onClick={() => setBillingPeriod("monthly")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              billingPeriod === "monthly"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Monthly Billing
+          </button>
+          <button
+            onClick={() => setBillingPeriod("annual")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              billingPeriod === "annual"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Annual Billing
+            <Badge
+              variant="secondary"
+              className="ml-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+            >
+              Save 15%
+            </Badge>
+          </button>
+        </div>
+      </div>
+
+      {/* Request Volume Input */}
+      <div className="max-w-2xl mx-auto mb-12 bg-muted/40 rounded-xl p-6">
+        <Label className="text-lg font-medium mb-4 block">
+          Estimate Your Costs
+        </Label>
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <Label
+                htmlFor="daily"
+                className="text-sm text-muted-foreground mb-2 block"
+              >
+                Daily Requests
+              </Label>
+              <Input
+                id="daily"
+                type="number"
+                min={500}
+                value={dailyRequests}
+                onChange={(e) =>
+                  setDailyRequests(
+                    roundToStep(Number(e.target.value), 500, 500)
+                  )
+                }
+                className="w-full"
+              />
+            </div>
+            <div>
+              <Label
+                htmlFor="monthly"
+                className="text-sm text-muted-foreground mb-2 block"
+              >
+                Monthly Requests
+              </Label>
+              <Input
+                id="monthly"
+                type="number"
+                min={30}
+                value={monthlyRequests}
+                onChange={(e) =>
+                  setDailyRequests(
+                    roundToStep(Number(e.target.value) / 30, 500, 500)
+                  )
+                }
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <Slider
+              value={[dailyRequests]}
+              min={500}
+              max={50000}
+              step={500}
+              onValueChange={([value]) =>
+                setDailyRequests(Math.max(500, value))
+              }
+              className="py-2"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+              <span>500/day</span>
+              <span>50,000/day</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="fixed" className="w-full">
+        <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-8">
+          <TabsTrigger value="fixed">Fixed Plans</TabsTrigger>
+          <TabsTrigger value="custom">Custom Plan</TabsTrigger>
+        </TabsList>
+
+        {/* Fixed Plans */}
+        <TabsContent value="fixed" className="mt-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {FIXED_TIERS.map((tier) => {
+              const price =
+                billingPeriod === "annual" && tier.monthlyPrice
+                  ? calcAnnual(tier.monthlyPrice)
+                  : tier.monthlyPrice;
+
+              const isPopular = tier.popular;
+
+              return (
+                <Card
+                  key={tier.name}
+                  className={`relative flex flex-col h-full transition-all hover:shadow-md ${
+                    isPopular
+                      ? "border-primary shadow-lg ring-1 ring-primary"
+                      : "border-border"
+                  }`}
+                >
+                  {isPopular && (
+                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                      <Badge className="bg-primary text-primary-foreground px-3 py-1 flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-current" />
+                        Most Popular
+                      </Badge>
+                    </div>
+                  )}
+
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center justify-between text-xl">
+                      {tier.name}
+                      {isPopular && (
+                        <Zap className="h-5 w-5 text-yellow-500" />
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+
+                  <CardContent className="flex-1 pb-4">
+                    {tier.monthlyPrice !== undefined ? (
+                      <>
+                        <p className="text-3xl font-bold">
+                          ₹
+                          {billingPeriod === "annual"
+                            ? Math.round(price || 0)
+                            : price}
+                          <span className="text-base font-normal text-muted-foreground">
+                            /{billingPeriod === "annual" ? "year" : "mo"}
+                          </span>
+                        </p>
+
+                        {billingPeriod === "annual" &&
+                          tier.monthlyPrice > 0 && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              ₹{tier.monthlyPrice}/mo billed annually
+                            </p>
+                          )}
+
+                        <p className="text-sm text-muted-foreground mt-2">
+                          ≈ ${inrToUsdt(tier.monthlyPrice || 0, usdtRate)} USDT
+                        </p>
+
+                        <p className="text-sm mt-4 font-medium">
+                          {tier.daily.toLocaleString()} daily requests
+                        </p>
+
+                        {tier.perRequest !== undefined &&
+                          tier.monthlyPrice > 0 && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                              ≈ ₹{tier.perRequest.toFixed(4)} per request
+                            </p>
+                          )}
+
+                        {tier.features && (
+                          <ul className="mt-4 space-y-2">
+                            {tier.features.map((feature, i) => (
+                              <li
+                                key={i}
+                                className="flex items-start text-sm"
+                              >
+                                <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-lg font-medium mt-2">
+                          Contact us for pricing
+                        </p>
+                        {tier.features && (
+                          <ul className="mt-4 space-y-2">
+                            {tier.features.map((feature, i) => (
+                              <li
+                                key={i}
+                                className="flex items-start text-sm"
+                              >
+                                <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+
+                  <CardFooter>
+                    <Button
+                      className="w-full"
+                      variant={isPopular ? "default" : "outline"}
+                      size="lg"
+                      onClick={handleRedirect}
+                    >
+                      {tier.monthlyPrice === 0
+                        ? "Get Started Free"
+                        : tier.monthlyPrice
+                        ? "Choose Plan"
+                        : "Contact Sales"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        {/* Custom Plan */}
+        <TabsContent value="custom" className="mt-4">
+          <Card className="border-2 border-primary shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-2xl">Custom Plan</CardTitle>
+              <p className="text-muted-foreground">
+                Tailored pricing for your specific needs
+              </p>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              <div className="bg-muted/30 p-4 rounded-lg">
+                <p className="text-sm font-medium">Your current usage estimate:</p>
+                <p className="text-xl font-bold mt-1">
+                  {dailyRequests.toLocaleString()} daily /{" "}
+                  {monthlyRequests.toLocaleString()} monthly requests
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Estimated cost
+                </p>
+                <p className="text-3xl font-bold mt-1">
+                  ₹
+                  {billingPeriod === "annual"
+                    ? Math.round(dynamicAnnualPrice)
+                    : dynamicMonthlyPrice}
+                  <span className="text-base font-normal text-muted-foreground">
+                    /{billingPeriod === "annual" ? "year" : "mo"}
+                  </span>
+                </p>
+
+                {billingPeriod === "annual" && (
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                    You save 15% with annual billing
+                  </p>
+                )}
+
+                <p className="text-sm text-muted-foreground mt-2">
+                  ≈ $
+                  {inrToUsdt(
+                    billingPeriod === "annual"
+                      ? dynamicAnnualPrice
+                      : dynamicMonthlyPrice,
+                    usdtRate
+                  )}{" "}
+                  USDT
+                </p>
+
+                {dynamicMonthlyPrice > 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    ≈ ₹{(dynamicMonthlyPrice / monthlyRequests).toFixed(4)} per
+                    request
+                  </p>
+                )}
+              </div>
+
+              {recommendedTier && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                  <div className="flex items-start">
+                    <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold">Recommended Plan</h4>
+                      <p className="text-sm mt-1">
+                        Based on your usage, the{" "}
+                        <strong>{recommendedTier.name}</strong> plan may be a
+                        better fit with predictable pricing.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+
+            <CardFooter>
+              <Button className="w-full" size="lg" onClick={handleRedirect}>
+                {dynamicMonthlyPrice > 0
+                  ? "Get Custom Plan"
+                  : "Contact Sales"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </section>
+  );
+}
