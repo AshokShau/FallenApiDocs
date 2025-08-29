@@ -289,24 +289,6 @@ export const QuickTest = ({ endpoints, baseUrl }: QuickTestProps) => {
                             </div>
                         ))}
                         
-                        {requiresUrl && (
-                            <div className="space-y-2">
-                                <Label htmlFor="url">
-                                    URL
-                                    <span className="text-destructive ml-1">*</span>
-                                </Label>
-                                <Input
-                                    id="url"
-                                    placeholder="https://open.spotify.com/track/..."
-                                    value={formValues.url || ''}
-                                    onChange={(e) => handleInputChange('url', e.target.value)}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    Works with Spotify, Instagram, Twitter, Threads, and more.
-                                </p>
-                            </div>
-                        )}
-
                         <Button
                             onClick={testEndpoint}
                             disabled={isLoading || !apiKey || !selectedEndpoint}

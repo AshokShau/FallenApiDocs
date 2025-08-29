@@ -2,7 +2,7 @@
   "api": {
     "name": "Fallen API",
     "version": "3.0",
-    "base_url": "https://beta.fallenapi.fun",
+    "base_url": "https://tgmusic.fallenapi.fun",
     "endpoints": [
       {
         "path": "/search",
@@ -21,6 +21,13 @@
             "default": 5,
             "example": 2,
             "description": "Max number of results to return"
+          },
+          "p": {
+            "type": "string",
+            "required": false,
+            "default": "spotify",
+            "example": "spotify",
+            "description": "Platform to search on"
           }
         },
         "response": {
