@@ -181,13 +181,17 @@ export default function PricingSection() {
               <Input
                 id="daily"
                 type="number"
-                min={500}
+                min={0}
+                step={500}
                 value={dailyRequests}
-                onChange={(e) =>
-                  setDailyRequests(
-                    roundToStep(Number(e.target.value), 500, 500)
-                  )
-                }
+                onChange={(e) => {
+                  const value = parseInt(e.target.value, 10) || 0;
+                  setDailyRequests(Math.max(0, value));
+                }}
+                onBlur={(e) => {
+                  const value = parseInt(e.target.value, 10) || 0;
+                  setDailyRequests(Math.max(500, Math.round(value / 500) * 500));
+                }}
                 className="w-full"
               />
             </div>
@@ -201,13 +205,18 @@ export default function PricingSection() {
               <Input
                 id="monthly"
                 type="number"
-                min={30}
+                min={0}
+                step={15000}
                 value={monthlyRequests}
-                onChange={(e) =>
-                  setDailyRequests(
-                    roundToStep(Number(e.target.value) / 30, 500, 500)
-                  )
-                }
+                onChange={(e) => {
+                  const value = parseInt(e.target.value, 10) || 0;
+                  setDailyRequests(Math.max(0, Math.floor(value / 30)));
+                }}
+                onBlur={(e) => {
+                  const value = parseInt(e.target.value, 10) || 0;
+                  const daily = Math.max(500, Math.round((value / 30) / 500) * 500);
+                  setDailyRequests(daily);
+                }}
                 className="w-full"
               />
             </div>
