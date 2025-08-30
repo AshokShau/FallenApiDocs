@@ -32,7 +32,7 @@ export const ApiDocsHeader = () => {
                     <div className="p-4 sm:p-6 rounded-xl bg-secondary border border-border">
                         <h3 className="font-semibold text-api-info mb-2">Social Media</h3>
                         <p className="text-sm text-muted-foreground">
-                            Instagram, Twitter, Facebook, TikTok, Threads, Twitch (Video and Clips), Reddit, Pinterest
+                            Instagram, Twitter, Facebook, TikTok, Threads, Twitch, Reddit, Pinterest, Bilibili
                         </p>
                     </div>
                     <div

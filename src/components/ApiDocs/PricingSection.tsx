@@ -37,12 +37,14 @@ async function fetchUsdtRate(): Promise<number | null> {
 
 
 const PRICING_RULES = [
-  { maxMonthly: 15_000, rate: 0.0020 },   // ~₹30
-  { maxMonthly: 30_000, rate: 0.0017 },   // ~₹51
-  { maxMonthly: 150_000, rate: 0.0015 },  // ~₹225
-  { maxMonthly: 1_000_000, rate: 0.0008 }, // ~₹800
-  { maxMonthly: 10_000_000, rate: 0.0006 },// ~₹6000
-  { maxMonthly: 30_000_000, rate: 0.0005 },// ~₹15000
+  { maxMonthly: 15_000, rate: 0.0013 },
+  { maxMonthly: 30_000, rate: 0.0011 },
+  { maxMonthly: 50_000, rate: 0.0010 },
+  { maxMonthly: 90_000, rate: 0.0009 },
+  { maxMonthly: 150_000, rate: 0.0008 },
+  { maxMonthly: 1_000_000, rate: 0.0007 },
+  { maxMonthly: 10_000_000, rate: 0.0006 },
+  { maxMonthly: 30_000_000, rate: 0.0005 },
 ] as const;
 
 
@@ -58,22 +60,48 @@ type PricingTier = {
   popular?: boolean;
 };
 
-const FIXED_TIERS: PricingTier[] = [
-  { name: "Starter", daily: 1_000, monthly: 30_000, monthlyPrice: 59, perRequest: 59 / 30_000 },
-  { name: "Basic", daily: 3_000, monthly: 90_000, monthlyPrice: 119, perRequest: 119 / 90_000 },
-  { name: "Growth", daily: 5_000, monthly: 150_000, monthlyPrice: 179, perRequest: 179 / 150_000 },
-  { name: "Pro", daily: 10_000, monthly: 300_000, monthlyPrice: 299, perRequest: 299 / 300_000 },
-  { name: "Advanced", daily: 15_000, monthly: 450_000, monthlyPrice: 449, perRequest: 449 / 450_000 }, // new
-  { name: "Scale", daily: 25_000, monthly: 750_000, monthlyPrice: 599, perRequest: 599 / 750_000 },
-  { name: "Business", daily: 50_000, monthly: 1_500_000, monthlyPrice: 1099, perRequest: 1099 / 1_500_000 },
-  { name: "Enterprise", daily: 100_000, monthly: 3_000_000, monthlyPrice: 1799, perRequest: 1799 / 3_000_000 },
-  { name: "Custom", daily: 200_000, monthly: 6_000_000 },
-];
+function generateFixedTiers(rules: typeof PRICING_RULES): PricingTier[] {
+  const desiredDailySteps = [
+    1000, 3000, 5000, 10000, 15000, 25000,
+    50000, 100000, 200000, 500000, 1_000_000
+  ];
 
+  const tiers: PricingTier[] = [];
 
-function roundToStep(value: number, step: number, min: number): number {
-  return Math.max(min, Math.round(value / step) * step);
+  for (let i = 0; i < desiredDailySteps.length; i++) {
+    const daily = desiredDailySteps[i];
+    const monthly = daily * 30;
+    const monthlyPrice = calcDynamicMonthlyPrice(monthly);
+
+    tiers.push({
+      name: [
+        "Starter", "Basic", "Growth", "Pro", "Advanced",
+        "Scale", "Business", "Enterprise", "Ultimate", "Elite", "Titan"
+      ][i] || `Tier ${i + 1}`,
+      daily,
+      monthly,
+      monthlyPrice,
+      perRequest: monthlyPrice / monthly,
+      features: [
+        `${(monthly / 1000).toLocaleString()}k requests/month`,
+        "Core features included", "Support All Platform's"
+      ],
+      popular: i === 2, // mark "Growth" as popular
+    });
+  }
+
+  // Custom plan for anything above
+  tiers.push({
+    name: "Custom",
+    daily: 2_000_000 / 30,
+    monthly: 2_000_000,
+  });
+
+  return tiers;
 }
+
+
+const FIXED_TIERS: PricingTier[] = generateFixedTiers(PRICING_RULES);
 
 function calcDynamicMonthlyPrice(monthlyRequests: number): number {
   for (const rule of PRICING_RULES) {
