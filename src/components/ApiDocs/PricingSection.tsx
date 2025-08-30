@@ -86,7 +86,7 @@ function generateFixedTiers(rules: typeof PRICING_RULES): PricingTier[] {
         `${(monthly / 1000).toLocaleString()}k requests/month`,
         "Core features included", "Support All Platform's"
       ],
-      popular: i === 2, // mark "Growth" as popular
+      popular: i === 3, // mark "Pro" as popular
     });
   }
 
